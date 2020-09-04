@@ -43,8 +43,12 @@ public class MMU {
     /**
      * Default call for every Processo object
      */
-    public boolean interrupt(int indexToAccess) {
-        // todo
+    public boolean interrupt(int indexToAccess, Processo process) {
+
+        if (virtualMemory[indexToAccess].intValue() == 0) { // If free memory
+
+        }
+
         return false;
     }
 
@@ -108,7 +112,7 @@ public class MMU {
      * Starts every Processo object
      * @return MMU instance (for methods chaining)
      */
-    private MMU start() {
+    MMU start() {
         processList.forEach(Thread::start);
         return this;
     }
@@ -123,18 +127,15 @@ public class MMU {
         return memFisica;
     }
 
+    public Byte[] getPhysicalMemory() {
+        return physicalMemory;
+    }
+
     public int getN() {
         return n;
     }
 
     public ArrayList<Processo> getProcessList() {
         return processList;
-    }
-
-    public static void main(String[] args) throws IllegalAccessException, InterruptedException {
-        MMU mmu = new MMU(10, 4096*2, 254).start();
-        Thread.sleep(5000);
-        MMU.hasFinish = true;
-        Arrays.stream(mmu.physicalMemory).forEach(System.out::println);
     }
 }

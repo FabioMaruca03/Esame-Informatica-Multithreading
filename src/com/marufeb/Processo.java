@@ -11,7 +11,7 @@ public class Processo extends Thread {
 
     public Processo(ThreadGroup group, String name, MMU instance) {
         super(group, name);
-        pagesNumber = generator.nextInt(2);
+        pagesNumber = generator.nextInt(10);
         mmu = instance;
     }
 
@@ -27,7 +27,12 @@ public class Processo extends Thread {
     @Override
     public void run() {
         while (!MMU.hasFinish) {
-            mmu.interrupt(generator.nextInt(4095));
+            mmu.interrupt(generator.nextInt(4095), this);
+            try {
+                Thread.sleep(generator.nextInt(10)+5);
+            } catch (InterruptedException e) {
+                System.out.println("Process: "+id+" ended in waiting status");
+            }
         }
     }
 
