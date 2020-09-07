@@ -25,9 +25,6 @@ public class Main {
                 for (int i = 0; i < executions; i++) {
                     MMU mmu = new MMU(accesses, memory, threads).start();
 
-                    mmu.look.acquire();
-                    // mmu.look.release();
-
                     System.out.println("EXECUTION No: " + i + "\n");
                     System.out.println("\n" + mmu + "\n");
 

@@ -28,9 +28,9 @@ public class MMU {
     static final Semaphore isWorking = new Semaphore(1);
     public final Semaphore look = new Semaphore(1);
 
-    public MMU(int accessiTotali, int memFisica, int n) throws IllegalArgumentException {
+    public MMU(int accessiTotali, int memFisica, int n) throws IllegalArgumentException, InterruptedException {
         this.accessiTotali = accessiTotali;
-        if (memFisica%4 == 0) {
+        if (memFisica % 4 == 0) {
             this.memFisica = memFisica;
             this.physicalMemory = new Byte[memFisica];
         } else throw new IllegalArgumentException("memFisica is not divisible by page size!");
@@ -121,12 +121,13 @@ public class MMU {
     /***
      * Initialize the entire process stack
      */
-    private void initProcess() {
+    private void initProcess() throws InterruptedException {
         for (int i = 0; i < n; i++) {
-            Processo process = new Processo(processGroup, "Processo "+i, this).assignId((byte)i+1);
+            Processo process = new Processo(processGroup, "Processo " + i, this).assignId((byte) i + 1);
             allocateProcess(process); // Physical memory allocation
             processList.add(process);
         }
+        look.acquire();
     }
 
     /**
