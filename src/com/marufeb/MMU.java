@@ -9,6 +9,8 @@ public class MMU {
     static int pageHit = 0;
     static int pageFaults = 0;
     static int accesses = 0;
+    static int killCount = 0;
+    private static boolean advancedMode = false;
 
     private final int accessiTotali;
     private final int memFisica; // RAM size
@@ -48,13 +50,20 @@ public class MMU {
         initProcess();
     }
 
+    public static void enableAdvancedAnalytics() {
+        advancedMode = true;
+    }
+
     /**
      * Default call for every Processo object
+     *
      * @param indexToAccess The actual index to access ( included the offset )
-     * @param pageNumber The page that needs to be used ( allows to split in different pages the process )
-     * @param process The process that needs to access the page
+     * @param process       The process that needs to access the page
      */
-    public void join(int indexToAccess, int pageNumber,  Processo process) {
+    public ArrayList<Integer> join(int indexToAccess, Processo process) {
+        ArrayList<Integer> DEFAULT = new ArrayList<>();
+        for (int i = 0; i < 4; i++) DEFAULT.add(0);
+
         try {
             isWorking.acquire();
 
@@ -62,58 +71,51 @@ public class MMU {
                 hasFinish = true;
                 isWorking.release(n);
                 look.release();
-                return;
-            } else if (hasFinish) return;
+                return DEFAULT;
+            } else if (hasFinish) return DEFAULT;
 
-            else accesses++; // Increment the accesses number
-
-            if(pageMapper.containsKey(idMapper.get(process.getRelatedId()))) { // If the page is mapped
-                pageHit++;
-            } else { // Page not mapped
-                pageFaults++;
-                boolean killed = false;
-
-                do {
-                    System.out.println(accesses);
-                    if (pageMapper.size() != memFisica / 4) { // If there's free memory
-                        if (killed) killed = false;
-                        processQueue.add(process); // Needed by the FIFO
-
-                        int phyAddress = 0;
-                        boolean done = false;
-
-                        ArrayList<Integer> locations = idMapper.get(process.getRelatedId());
-                        int virAddress = locations.get(pageNumber - 1); // Virtual address
-
-                        for (int i = 0; i < memFisica / 4 && !done; i += 4) { // For each page
-                            Byte[] slice = Arrays.copyOfRange(physicalMemory, i, i + 4);
-                            if (Arrays.compare(slice, blankPage) == 0) { // Free memory
-                                System.arraycopy(virtualMemory, virAddress, physicalMemory, i, 4);
-                                phyAddress = i;
-                                done = true;
-                            } // Else continue
-                        }
-
-                        pageMapper.put(virAddress, phyAddress); // Update page mapping
-
-                    } else {
-                        killed = true;
-                        int freePages = 0;
-                        while (freePages < process.pagesNumber) {
-                            Processo victim = processQueue.poll();
-                            if (victim != null) {
-                                freePages += killProcess(victim.getRelatedId()).size();
-                            } else break;
-                        }
-                    }
-                } while (killed);
+            else {
+                accesses++; // Increment the accesses number
+                DEFAULT.set(0, 1);
             }
+
+            int id = process.getRelatedId();
+
+            if (pageMapper.containsKey(idMapper.get(id).get(0)) && pageMapper.containsValue(indexToAccess)) { // If the page is mapped
+                pageHit++;
+                DEFAULT.set(1, 1);
+            } else {
+                pageFaults++;
+                DEFAULT.set(2, 1);
+                int pagesAvailable = memFisica / 4 - pageMapper.size();
+                while (pagesAvailable < process.pagesNumber) { // Swap out
+                    pagesAvailable += killProcess(processQueue.poll().getRelatedId()).size();
+                    DEFAULT.set(3, DEFAULT.get(3) + 1);
+                    killCount++;
+                }
+
+                ArrayList<Integer> missingPages = idMapper.get(id);
+                Byte[] page = {(byte) id, (byte) id, (byte) id, (byte) id};
+
+                for (int i = 0, j = 0; i < memFisica && j < missingPages.size(); i += 4) { // Swap in
+                    Byte[] slice = Arrays.copyOfRange(physicalMemory, i, i + 4);
+                    if (Arrays.compare(slice, blankPage) == 0) { // Free memory
+                        System.arraycopy(page, 0, physicalMemory, i, 4);
+                        pageMapper.put(missingPages.get(j), i);
+                        j++;
+                    }
+                }
+                processQueue.add(process);
+            }
+
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
             isWorking.release();
         }
 
+        return DEFAULT;
     }
 
     /***
@@ -133,18 +135,19 @@ public class MMU {
     private void allocateProcess(Processo process) {
         ArrayList<Integer> allocations = new ArrayList<>();
         for (int i = 0; i < 4096 && allocations.size() <= process.pagesNumber; i+=4) {
-            Byte[] slice = Arrays.copyOfRange(virtualMemory, i, i+4);
+            Byte[] slice = Arrays.copyOfRange(virtualMemory, i, i + 4);
             if (Arrays.compare(slice, blankPage) == 0) { // Free memory
                 allocations.add(i);
-                for (int j = i; j < i+4; j++) {
+                for (int j = i; j < i + 4; j++) {
                     virtualMemory[j] = (byte) process.getRelatedId(); // Set page value
                 }
             }
         }
         if (allocations.size() < process.pagesNumber)
-            throw new IllegalStateException("Cannot allocate process: "+process.getName());
+            throw new IllegalStateException("Cannot allocate process: " + process.getName());
         else idMapper.put(process.getRelatedId(), allocations);
-        System.out.println("Allocated "+allocations.size()+" pages for process "+process.getRelatedId());
+        if (advancedMode)
+            System.out.println("Allocated " + allocations.size() + " pages for process " + process.getRelatedId());
     }
 
     /**
@@ -153,8 +156,10 @@ public class MMU {
     private ArrayList<Integer> killProcess(int id) {
         for (Integer pageLocation : idMapper.get(id)) { // For each location
             if (pageMapper.containsKey(pageLocation)) { // If bind is present
-                System.arraycopy(blankPage, 0, physicalMemory, pageMapper.get(pageLocation), 4 );
-                System.out.println("Process: "+id+" killed");
+                System.arraycopy(blankPage, 0, physicalMemory, pageMapper.get(pageLocation), 4);
+                pageMapper.remove(pageLocation);
+                if (advancedMode)
+                    System.out.println("Process: " + id + " killed");
             }
         }
         return idMapper.get(id);
@@ -202,5 +207,41 @@ public class MMU {
 
     public ArrayList<Processo> getProcessList() {
         return processList;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("MMU Analytics\n");
+
+        if (advancedMode) {
+            builder.append("\nID Mapper: \n");
+            for (Integer key : getIdMapper().keySet()) {
+                builder.append(key).append("\t").append(getIdMapper().get(key)).append("\n");
+            }
+
+            builder.append("\nPage Mapper: \n");
+            for (Integer key : getPageMapper().keySet()) {
+                builder.append(key).append("\t").append(getPageMapper().get(key)).append("\n");
+            }
+        }
+
+        builder.append("Total accesses: ").append(MMU.accesses).append(" pH ").append(MMU.pageHit)
+                .append(" pF ").append(MMU.pageFaults).append(" kills ").append(killCount).append("\n");
+
+        builder.append("\nProcesses Analytics\n");
+        for (Processo temp : processList)
+            builder.append(temp);
+
+        return builder.toString();
+    }
+
+    public static void initialize() {
+        hasFinish = false;
+        killCount = 0;
+        pageFaults = 0;
+        pageHit = 0;
+        accesses = 0;
     }
 }

@@ -1,40 +1,50 @@
 package com.marufeb;
 
+import java.util.Scanner;
+
 public class Main {
+
     public static void main(String[] args) throws InterruptedException {
-        MMU mmu = new MMU(100, 50*4, 100).start();
+        boolean done = false;
+        Scanner scanner = new Scanner(System.in);
+        while (!done) {
+            try {
+                System.out.print("\nHi, here's the MMU! Insert these values: \n Accessi Totali: ");
+                int accesses = Integer.parseInt(scanner.next());
+                System.out.print("Memoria Fisica: ");
+                int memory = Integer.parseInt(scanner.next());
+                System.out.print("N° Processi: ");
+                int threads = Integer.parseInt(scanner.next());
+                // System.out.print("Executions: ");
+                int executions = 1;
+                // if (executions == 0) executions = 1;
 
-        mmu.look.acquire();
+                //----| Enable for debug
+                //MMU.enableAdvancedAnalytics();
 
-        System.out.println("\nPhysical memory: ");
-        for (int i = 0; i < mmu.getMemFisica(); i+=4) {
-            System.out.print("Page: "+i/4+":\t");
-            for (int j = 0; j < 4; j++) {
-                System.out.print(mmu.getPhysicalMemory()[j] + " ");
+                for (int i = 0; i < executions; i++) {
+                    MMU mmu = new MMU(accesses, memory, threads).start();
+
+                    mmu.look.acquire();
+                    // mmu.look.release();
+
+                    System.out.println("EXECUTION No: " + i + "\n");
+                    System.out.println("\n" + mmu + "\n");
+
+                    // MMU.initialize();
+                }
+
+                System.out.println("\nDo you want to do it again? [Y/y char to confirm, any other one to end]\n");
+                String temp = scanner.next();
+
+                done = !temp.equals("Y") && !temp.equals("y");
+
+            } catch (IllegalArgumentException e) {
+                if (e instanceof NumberFormatException)
+                    System.out.println("Only numbers are allowed!");
+                else System.out.println(e.getMessage());
             }
-            System.out.println();
         }
-
-        System.out.println("\nVirtual memory: ");
-        for (int i = 0; i < 4096; i+=4) {
-            System.out.print("Page: "+i/4+":\t");
-            for (int j = 0; j < 4; j++) {
-                System.out.print(mmu.getVirtualMemory()[j] + " ");
-            }
-            System.out.println();
-        }
-
-        System.out.println("\nID Mapper");
-        for (Integer key : mmu.getIdMapper().keySet()){
-            System.out.println(key + "\t" + mmu.getIdMapper().get(key));
-        }
-
-        System.out.println("\nPage Mapper");
-        for (Integer key : mmu.getPageMapper().keySet()){
-            System.out.println(key + "\t" + mmu.getPageMapper().get(key));
-        }
-
-        System.out.println("Accessi totali: " + MMU.accesses + " N: " + mmu.getN()
-                + " pH " + MMU.pageHit + " pF " + MMU.pageFaults);
+        scanner.close();
     }
 }
