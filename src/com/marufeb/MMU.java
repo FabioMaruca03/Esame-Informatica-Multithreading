@@ -34,10 +34,10 @@ public class MMU {
     public MMU(int accessiTotali, int memFisica, int n) throws IllegalArgumentException, InterruptedException {
         this.accessiTotali = accessiTotali;
         // Input exceptions
-        if (memFisica % 4 == 0) {
+        if (memFisica >= 40) {
             this.memFisica = memFisica;
             this.physicalMemory = new Byte[memFisica];
-        } else throw new IllegalArgumentException("memFisica is not divisible by page size!");
+        } else throw new IllegalArgumentException("memFisica must be greater than 10!");
         if (n >= 0 && n < 127) { // Limitation (8 bit positive only)
             this.n = n;
         } else throw new IllegalArgumentException("Number of threads could be only greater than 0 and less than 127");
@@ -116,7 +116,7 @@ public class MMU {
 
 
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            return DEFAULT;
         } finally {
             isWorking.release();
         }

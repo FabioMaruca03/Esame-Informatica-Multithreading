@@ -14,8 +14,8 @@ public class Main {
                 //-----| Inputs
                 System.out.print("\nHi, here's the MMU! Insert these values: \n Accessi Totali: ");
                 int accesses = Integer.parseInt(scanner.next());
-                System.out.print("Memoria Fisica: ");
-                int memory = Integer.parseInt(scanner.next());
+                System.out.print("Memoria Fisica (pages number): ");
+                int memory = Integer.parseInt(scanner.next()) * 4;
                 System.out.print("N° Processi: ");
                 int threads = Integer.parseInt(scanner.next());
                 // System.out.print("Executions: ");
