@@ -5,11 +5,9 @@ import java.util.Scanner;
 public class Main {
 
     public static void main(String[] args) {
-        boolean done = false;
 
         // Scanner for command line input
         Scanner scanner = new Scanner(System.in);
-        while (!done) { // While implementation for do-again system
             try {
                 //-----| Inputs
                 System.out.print("\nHi, here's the MMU! Insert these values: \n Accessi Totali: ");
@@ -18,14 +16,8 @@ public class Main {
                 int memory = Integer.parseInt(scanner.next()) * 4;
                 System.out.print("N° Processi: ");
                 int threads = Integer.parseInt(scanner.next());
-                // System.out.print("Executions: ");
                 int executions = 1;
-                // if (executions == 0) executions = 1;
 
-                //----| Enable for debug
-                //MMU.enableAdvancedAnalytics();
-
-                // Default executions = 1
                 for (int i = 0; i < executions; i++) {
 
                     // Creating new MMU, arguments from the documentation
@@ -34,16 +26,10 @@ public class Main {
                     // Printing analytics
                     System.out.println("EXECUTION No: " + i + "\n");
                     System.out.println("\n" + mmu + "\n");
-
-                    // MMU.initialize();
+                    
                 }
 
-                System.out.println("\nDo you want to do it again? [Y/y char to confirm, any other one to end]\n");
-
-                // Updating input from console
-                String temp = scanner.next();
-
-                done = !temp.equals("Y") && !temp.equals("y");
+                System.out.println("Simulation finished");
 
             } catch (IllegalArgumentException e) {
                 if (e instanceof NumberFormatException) // If not a number somewhere
@@ -52,7 +38,6 @@ public class Main {
             } catch (InterruptedException e) {
                 e.getMessage();
             }
-        }
         scanner.close();
     }
 }
