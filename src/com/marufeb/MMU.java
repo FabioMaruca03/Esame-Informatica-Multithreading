@@ -5,6 +5,7 @@ import java.util.concurrent.Semaphore;
 
 public class MMU {
 
+    //-----| Default |-----//
     public static boolean hasFinish = false;
     static int pageHit = 0;
     static int pageFaults = 0;
@@ -12,24 +13,27 @@ public class MMU {
     static int killCount = 0;
     private static boolean advancedMode = false;
 
+    //-----| Arguments |-----//
     private final int accessiTotali;
     private final int memFisica; // RAM size
     private final int n; // Processes counter
 
-    private final ThreadGroup processGroup = new ThreadGroup("Processes");
+    //-----| Structures |-----//
+    private final ThreadGroup processGroup = new ThreadGroup("Processes"); // Thread group
     private final Map<Integer, ArrayList<Integer>> idMapper = new HashMap<>(); // <ProcessID, Virtual locations>
     private final Map<Integer, Integer> pageMapper = new HashMap<>(); // <Virtual location, Physical location>
-    private final ArrayList<Processo> processList = new ArrayList();
-    private final Queue<Processo> processQueue = new ArrayDeque<>();
+    private final ArrayList<Processo> processList = new ArrayList(); // Processes list
+    private final Queue<Processo> processQueue = new ArrayDeque<>(); // FIFO
     private final Byte[] virtualMemory; // SWAP
     private final Byte[] physicalMemory; // RAM
-    private final Byte[] blankPage = {0, 0, 0, 0};
+    private final Byte[] blankPage = {0, 0, 0, 0}; // Simple blank page
 
-    static final Semaphore isWorking = new Semaphore(1);
+    static final Semaphore isWorking = new Semaphore(1); // Threads semaphores
     public final Semaphore look = new Semaphore(1);
 
     public MMU(int accessiTotali, int memFisica, int n) throws IllegalArgumentException, InterruptedException {
         this.accessiTotali = accessiTotali;
+        // Input exceptions
         if (memFisica % 4 == 0) {
             this.memFisica = memFisica;
             this.physicalMemory = new Byte[memFisica];
@@ -37,8 +41,10 @@ public class MMU {
         if (n >= 0 && n < 127) { // Limitation (8 bit positive only)
             this.n = n;
         } else throw new IllegalArgumentException("Number of threads could be only greater than 0 and less than 127");
-        this.virtualMemory = new Byte[4096];
 
+        // Initialization
+
+        this.virtualMemory = new Byte[4096];
         for (int i = 0; i < 4096; i++) {
             virtualMemory[i] = 0;
         }
