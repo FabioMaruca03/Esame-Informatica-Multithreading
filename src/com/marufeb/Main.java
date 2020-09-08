@@ -22,11 +22,11 @@ public class Main {
 
                     // Creating new MMU, arguments from the documentation
                     MMU mmu = new MMU(accesses, memory, threads).start();
-
+                    MMU.enableAdvancedAnalytics();
                     // Printing analytics
                     System.out.println("EXECUTION No: " + i + "\n");
                     System.out.println("\n" + mmu + "\n");
-                    
+
                 }
 
                 System.out.println("Simulation finished");

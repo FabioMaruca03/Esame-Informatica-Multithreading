@@ -14,6 +14,7 @@ public class Processo extends Thread {
 
     public Processo(ThreadGroup group, String name, MMU instance) {
         super(group, name); // Init thread
+        setDaemon(true);
         pagesNumber = generator.nextInt(9) + 1; // Max available: 16 pages per Processo
         mmu = instance; // Update the instance
         for (int i = 0; i < 4; i++) {
