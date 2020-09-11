@@ -21,7 +21,7 @@ public class MMU {
     //-----| Structures |-----//
     private final ThreadGroup processGroup = new ThreadGroup("Processes"); // Thread group
     private final Map<Integer, ArrayList<Integer>> idMapper = new HashMap<>(); // <ProcessID, Virtual locations>
-    private final Map<Integer, Integer> pageMapper = new HashMap<>(); // <Virtual location, Physical location>
+    private final List<Map<Integer, Integer>> pageMapper = new LinkedList<>(); // [<Virtual location, Physical location>]
     private final ArrayList<Processo> processList = new ArrayList(); // Processes list
     private final Queue<Processo> processQueue = new ArrayDeque<>(); // FIFO
     private final Byte[] virtualMemory; // SWAP
@@ -87,7 +87,7 @@ public class MMU {
 
             int id = process.getRelatedId();
 
-            if (pageMapper.containsKey(idMapper.get(id).get(0)) && pageMapper.containsValue(indexToAccess)) { // If the page is mapped
+            if (process.getInternalMapper().containsKey(idMapper.get(id).get(0)) && process.getInternalMapper().containsValue(indexToAccess)) { // If the page is mapped
                 pageHit++;
                 DEFAULT.set(1, 1);
             } else {
@@ -95,6 +95,7 @@ public class MMU {
                 DEFAULT.set(2, 1);
                 int pagesAvailable = memFisica / 4 - pageMapper.size();
                 while (pagesAvailable < process.pagesNumber) { // Swap out
+                    pageMapper.remove(processQueue.peek().getInternalMapper());
                     pagesAvailable += killProcess(processQueue.poll().getRelatedId()).size();
                     DEFAULT.set(3, DEFAULT.get(3) + 1);
                     killCount++;
@@ -107,10 +108,11 @@ public class MMU {
                     Byte[] slice = Arrays.copyOfRange(physicalMemory, i, i + 4);
                     if (Arrays.compare(slice, blankPage) == 0) { // Free memory
                         System.arraycopy(page, 0, physicalMemory, i, 4);
-                        pageMapper.put(missingPages.get(j), i);
+                        process.getInternalMapper().put(missingPages.get(j), i);
                         j++;
                     }
                 }
+                pageMapper.add(process.getInternalMapper());
                 processQueue.add(process);
             }
 
@@ -162,8 +164,12 @@ public class MMU {
      */
     private ArrayList<Integer> killProcess(int id) {
         for (Integer pageLocation : idMapper.get(id)) { // For each location
-            if (pageMapper.containsKey(pageLocation)) { // If bind is present
-                System.arraycopy(blankPage, 0, physicalMemory, pageMapper.get(pageLocation), 4);
+            Map<Integer, Integer> mapper = null;
+            for (Processo p : processList)
+                if (p.getRelatedId() == id)
+                    mapper = p.getInternalMapper();
+            if (mapper != null && mapper.containsKey(pageLocation)) { // If bind is present
+                System.arraycopy(blankPage, 0, physicalMemory, mapper.get(pageLocation), 4);
                 pageMapper.remove(pageLocation);
                 if (advancedMode)
                     System.out.println("Process: " + id + " killed");
@@ -200,7 +206,7 @@ public class MMU {
         return virtualMemory;
     }
 
-    public Map<Integer, Integer> getPageMapper() {
+    public List<Map<Integer, Integer>> getPageMapper() {
         return pageMapper;
     }
 
@@ -229,9 +235,10 @@ public class MMU {
             }
 
             builder.append("\nPage Mapper: \n");
-            for (Integer key : getPageMapper().keySet()) {
-                builder.append(key).append("\t").append(getPageMapper().get(key)).append("\n");
-            }
+            for (Map<Integer, Integer> page : pageMapper)
+                for (Integer key : page.keySet()) {
+                    builder.append(key).append("\t").append(page.get(key)).append("\n");
+                }
         }
 
         builder.append("Total accesses: ").append(MMU.accesses).append(" pH ").append(MMU.pageHit)
