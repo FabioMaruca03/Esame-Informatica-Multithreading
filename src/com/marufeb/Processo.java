@@ -1,8 +1,6 @@
 package com.marufeb;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 
 public class Processo extends Thread {
@@ -10,7 +8,6 @@ public class Processo extends Thread {
     private final Random generator = new Random(System.nanoTime()); // New generator
     public final int pagesNumber; // The actual pages number
     private final MMU mmu; // The MMU object that creates
-    private final Map<Integer, Integer> internalMapper = new HashMap<>();
     private int id = 0; // The id of the process
 
     private final ArrayList<Integer> analytics = new ArrayList<>(); // Analytics
@@ -34,18 +31,14 @@ public class Processo extends Thread {
         return id;
     }
 
-    public Map<Integer, Integer> getInternalMapper() {
-        return internalMapper;
-    }
-
     @Override
     public void run() {
         while (!MMU.hasFinish) { // Auto deletes the thread
             try {
                 ArrayList<Integer> availableLocations = new ArrayList<>(); // Pages locations
                 for (int location : mmu.getIdMapper().get(id)) // For each location mapped in physical memory by id
-                    if (internalMapper.containsKey(location)) // If is mapped
-                        availableLocations.add(internalMapper.get(location)); // Add to available locations
+                    if (mmu.getPageMapper().containsKey(location)) // If is mapped
+                        availableLocations.add(mmu.getPageMapper().get(location)); // Add to available locations
                 ArrayList<Integer> result; // The result of join method
                 if (availableLocations.size() == 0)
                     result = mmu.join(generator.nextInt(4095), this); // Join with a random location
